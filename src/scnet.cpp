@@ -15,14 +15,10 @@
 
 namespace scnet {
 
-struct client_state {
-	struct address address;
-	void* userdata;
-	int fd;
-	std::vector<uint8_t> read_buffer;
-	uint64_t bytes_read;
-	uint64_t bytes_written;
-};
+
+device_callbacks::~device_callbacks() {
+
+}
 
 static bool set_fd_blocking(int fd, bool blocking) {
 	if (fd < 0)
@@ -51,6 +47,15 @@ static int create_socket() {
 	set_fd_blocking(fd, false);
 	return fd;
 }
+
+struct client_state {
+	struct address address;
+	void* userdata;
+	int fd;
+	std::vector<uint8_t> read_buffer;
+	uint64_t bytes_read;
+	uint64_t bytes_written;
+};
 
 device::device(std::unique_ptr<device_callbacks> callbacks, uint16_t port, size_t client_hint, size_t num_threads) :
 	callbacks(std::move(callbacks))
@@ -211,14 +216,13 @@ void device::handle_accept() {
 }
 
 void device::handle_read(client_state* client) {
-	/* * We have data on the fd waiting to be read. Read and
-		display it. We must read whatever data is available
-		completely, as we are running in edge-triggered mode
-		and won't get a notification again for the same
-		data.
-	*/
-	bool done = false;
-
+	/*-
+	 * We have data on the fd waiting to be read. Read and
+	 * display it. We must read whatever data is available
+	 * completely, as we are running in edge-triggered mode
+	 * and won't get a notification again for the same
+	 * data.
+	 */
 	for(;;) {
 		std::array<char, 512> buffer;
 		ssize_t count;
@@ -228,7 +232,6 @@ void device::handle_read(client_state* client) {
 			/* If errno == EAGAIN, that means we have read all data. So go back to the main loop. */
 			if (errno != EAGAIN) {
 				perror("read");
-				done = true;
 			}
 			break;
 		}
@@ -240,7 +243,7 @@ void device::handle_read(client_state* client) {
 
 		client->bytes_read += count;
 
-		if (callbacks && count > 0) {
+		if (callbacks && (count > 0)) {
 			auto& rb = client->read_buffer;
 			// Add the read data to the client buffer
 			rb.insert(rb.end(), buffer.begin(), buffer.begin() + count);
@@ -251,15 +254,8 @@ void device::handle_read(client_state* client) {
 				rb.data(),
 				rb.size()
 			);
-			// The trickery we perform in the "else" path throws an std::badalloc exception
-			// if the callback reads all the data
-			if((rb.size() - count) <= 0) {
-				std::memset(&rb[0], 0, rb.size()); // Sanitation paranoia!!!
-				rb.clear();
-			}
-			else { // Don't throw out all the data!
-				rb = std::vector<uint8_t>(rb.begin() + count, rb.end());
-			}
+
+			rb = std::vector<uint8_t>(rb.begin() + count, rb.end());
 		}
 	}
 }
@@ -280,10 +276,15 @@ void device::worker(device& device, size_t id) {
 	for (;;) {
 		std::array<struct epoll_event, MAX_EVENTS> events;
 		// Check if the kernel has any events waiting for us.
-		size_t num_events = epoll_wait(device.epoll_fd, events.data(), events.size(), -1);
+		int num_events = epoll_wait(device.epoll_fd, events.data(), events.size(), -1);
+
+		if (num_events == -1) {
+			perror("epoll_wait");
+			continue;
+		}
 
 		// Loop through the kernel's events.
-		for (size_t i = 0; i < num_events; i++) {
+		for (size_t i = 0; i < (size_t)num_events; i++) {
 			auto& event = events[i];
 			auto client = static_cast<client_state*>(event.data.ptr);
 

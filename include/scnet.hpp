@@ -55,6 +55,8 @@ public:
 	* be passed again upon the next read event.
 	*/
 	virtual int64_t on_read(device& device, client_state* client, const void* buffer, size_t size) = 0;
+
+	virtual ~device_callbacks() = 0;
 };
 
 struct client_state;

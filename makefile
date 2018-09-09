@@ -1,6 +1,6 @@
 CC := g++
-CFLAGS := -O0 -g -std=c++14 -Iinclude/
-LDFLAGS := -g
+CFLAGS := -O0 -g -std=c++14 -Wall -Wextra -Iinclude/
+LDFLAGS := -g 
 LDLIBS  := -lpthread
 TARGET := epoll-echo
 
@@ -13,6 +13,8 @@ OBJDIR := obj
 include src/makefile
 
 OBJS := $(addprefix $(OBJDIR)/, $(OBJS))
+
+DEPS := $(OBJS:.o=.d)
 
 
 # The main target

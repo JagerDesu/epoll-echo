@@ -21,17 +21,17 @@ static bool read_args(int argc, char** argv, program_args& args) {
 		std::cout << "epoll-echo: This program requires arguments to run. Run with -h for help.\n";
 	}
 
-	for (size_t i = 1; i < argc; i++) {
+	for (size_t i = 1; i < (size_t)argc; i++) {
 		if (argv[i] == std::string("-h")) { // Help
 			print_usage();
 			return false;
 		}
 		else if (argv[i] == std::string("-p")) { // Port
-			if ((i + 1) < argc)
+			if ((i + 1) < (size_t)argc)
 				args.port = std::atoi(argv[++i]);
 		}
 		else if (argv[i] == std::string("-t")) { // Port
-			if ((i + 1) < argc)
+			if ((i + 1) < (size_t)argc)
 				args.num_threads = std::atoi(argv[++i]);
 		}
 		else { // Default
@@ -44,12 +44,19 @@ static bool read_args(int argc, char** argv, program_args& args) {
 }
 
 class device_callbacks : public scnet::device_callbacks {
+public:
+	~device_callbacks() {
+
+	}
+
 	bool on_startup(scnet::device& device) {
+		(void)device;
 		std::cout << "Epoll Echo Server started up.\n";
 		return true;
 	}
 
 	void on_shutdown(scnet::device& device) {
+		(void)device;
 		std::cout << "Epoll Echo Server shut down.\n";
 	}
 
