@@ -1,0 +1,3 @@
+Simple echo server using a stripped-down version of my epoll networking code. Is multithreaded.
+
+To use, start a server and then connect with a telnet client.
